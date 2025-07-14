@@ -97,12 +97,14 @@
 - **all-MiniLM-L6-v2**: Efficient 384-dimension sentence embeddings
 
 ### Architecture Overview
+```mermaid
 graph TD
     A[Streamlit UI] -->|HTTP Requests| B[FastAPI]
     B --> C[ChromaDB]
     B --> D[Groq LLM]
     C -->|Vector Search| B
     D -->|LLM Processing| B
+```
 
 ## Prompt Design
 
