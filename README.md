@@ -1,10 +1,25 @@
 ## Invoice Reimbursement System
-### Project Overview
+## Project Overview
 - The Invoice Reimbursement System automates the analysis of employee expense invoices against company HR policies using AI. It consists of:
 
     - FastAPI Backend: Processes invoices, stores data in a vector database, and handles natural language queries.
 
     - Streamlit UI: Provides an intuitive interface for users to upload invoices and ask questions.
+
+## Folder Structure
+
+```
+invoice-reimbursement-system/
+├── main.py                # FastAPI backend code
+├── app.py                 # Streamlit UI entry point
+|── rag_system.py          # RAG application 
+├── invoice_system.py      # Invoice analysis logic
+├── requirements.txt       # Python dependencies
+├── .env                   # Environment variables
+├── data/                  # Sample invoices and policies
+├── chroma_db/             # vectore database file         
+├── README.md
+```
 
 ### Key Capabilities:
 - Automated invoice policy compliance checks
@@ -12,38 +27,37 @@
 - Scalable storage with ChromaDB vector database
 - Detailed reimbursement analytics
 
-### Installation Instructions
-- Prerequisites
-    - Python 3.10+
-    - Groq API key (for LLM access)
+## Installation Instructions
+**Prerequisites**
+ - Python 3.10+
+ - Groq API key (for LLM access)
 
-## Setup
-1. Clone the repository:
-    - git clone https://github.com/your-repo/invoice-reimbursement-system.git
-    - cd invoice-reimbursement-system
+### Setup
+**1. Clone the repository:**
+ - git clone https://github.com/your-repo/invoice-reimbursement-system.git
+ - cd invoice-reimbursement-system
 
-2. Create & Activate Virtual Environment (Optional but Recommended)
-    - python3 -m venv venv
-    - source venv/bin/activate
+**2. Create & Activate Virtual Environment (Optional but Recommended)**
+ - python3 -m venv venv
+ - source venv/bin/activate
 
-3. Install dependencies:
+**3. Install dependencies:**
+ - pip install -r requirements.txt
 
-    - pip install -r requirements.txt
-3. Create a .env file:
-    - GROQ_API_KEY="your-api-key"
-    - API_URL="http://localhost:8000"  # For local development
+**4. Create a .env file:**
+- GROQ_API_KEY="your-api-key"
+- API_URL="http://localhost:8000"  # For local development
 
-4. Start the services:
+**5. Start the services:**
 
-    1. FastAPI Backend:
-        - uvicorn api.main:app --reload
-    2. Streamlit UI:
-        - streamlit run app.py
-5. Access the UI at:
+    1. FastAPI Backend. : uvicorn api.main:app --reload
+    2. Streamlit UI.    : streamlit run app.py
+
+**6. Access the UI at:**
     - http://localhost:8501
 
 ## Usage Guide
-1. **Invoice Analysis**
+**1. Invoice Analysis**
 - **Input**:
 
    - HR Policy (PDF/DOCX)
@@ -61,7 +75,7 @@
     - Upload required files
     - Click "Analyze Invoices"
 
-2. **Query Mode**
+**2. Query Mode**
 - **Input**:
 
     - Natural language query (e.g., "Show declined travel expenses")
@@ -96,7 +110,8 @@
 - **Groq/Llama-3**: High-speed LLM inference for real-time responses
 - **all-MiniLM-L6-v2**: Efficient 384-dimension sentence embeddings
 
-### Architecture Overview
+## Architecture Overview
+*The following diagram shows how the user interface, backend, vector database, and language model interact. This helps both technical and non-technical readers understand the system flow.*
 ```mermaid
 graph TD
     A[Streamlit UI] -->|HTTP Requests| B[FastAPI]
@@ -108,4 +123,31 @@ graph TD
 
 ## Prompt Design
 
-### Invoice Analysis Prompt
+**1. Invoice Analysis Prompt**
+
+You are an expert invoice analyzer. Compare this invoice against the HR policy and return:
+- Status (Fully/Partially/Declined)
+- Exact policy clause violated (include section numbers)
+- Approved amount (if partial)
+Format: Strict JSON with all required fields.
+
+**2. Query Response Prompt**
+
+You are a reimbursement assistant. Answer the user's question using ONLY the provided invoice data:
+1. Start with a summary
+2. List each invoice with: Status, Amount, Reason (with policy reference)
+3. Format amounts as $X.XX
+4. Be concise and factual.
+
+
+## Challenges & Solutions
+
+This section details the significant challenges faced during development and the solutions implemented to address them.
+
+| Challenge                            | Solution                                   |
+| :----------------------------------- | :----------------------------------------- |
+| ChromaDB filter syntax complexity    | Implemented a dynamic filter builder       |
+| LLM hallucination in responses       | Added strict prompt constraints            |
+| PDF text extraction errors           | Fallback to multiple PDF libraries (PyMuPDF,PyPDF2, pdfplumber, python-docx  )      |
+| Mixed currency formats               | Auto-detection from reason text            |
+
