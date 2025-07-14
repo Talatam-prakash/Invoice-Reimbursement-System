@@ -1,0 +1,14 @@
+python_dotenv
+langchain
+langchain_groq
+chromadb
+huggingface 
+sentence_transformers
+pypdf2
+python-docx
+PyMuPDF
+fastapi
+uvicorn
+python-multipart
+streamlit
+requests
