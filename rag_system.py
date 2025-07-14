@@ -36,7 +36,7 @@ class RAGInvoiceChatbot:
                     model_name="all-MiniLM-L6-v2"
                 )
             )
-        except ValueError:
+        except chromadb.errors.NotFoundError:
             self.collection = self.chroma_client.create_collection(
                 name="invoices",
                 embedding_function=embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -45,7 +45,7 @@ class RAGInvoiceChatbot:
             )
 
     # Define the main method to query invoices using the RAG pipeline
-    def query_invoices(self, query: str, filters: Optional[Dict] = None, n_results: int = 3) -> str:
+    def query_invoices(self, query: str, filters: Optional[Dict] = None) -> str:
         """
         End-to-end RAG pipeline: Retrieve invoices → Generate LLM response.
         
@@ -56,45 +56,77 @@ class RAGInvoiceChatbot:
         Returns:
             Markdown-formatted answer.
         """
+        original_filters = filters.copy() if filters else None
         # Retrieve relevant invoices
-        invoices = self._retrieve_invoices(query, filters, n_results)
+        invoices = self._retrieve_invoices(query, filters)
         if not invoices:
-            return "No matching invoices found."
+            # Check if an employee_name filter was specifically used
+            if original_filters and "employee_name" in original_filters:
+                employee_name = original_filters["employee_name"]
+                return f"No data provided for the employee named '{employee_name}'."
+            else:
+                return "No matching invoices found."
 
+       
         # Generate LLM response
         return self._generate_response(query, invoices)
 
-    # Private method to retrieve invoices using hybrid search (vector + metadata)
-    def _retrieve_invoices(self, query: str, filters: Optional[Dict] = None, n_results: int = 3) -> List[Dict]:
+    def _retrieve_invoices(self, query: str, filters: Optional[Dict] = None) -> List[Dict]:
         """Hybrid search (vector + metadata) with ChromaDB-compatible filters."""
         query_embedding = self.embedding_model.encode(query).tolist()
         
-        # Handle filters
         chroma_filters = None
+        employee_name_filter_value = None
+       # Flag to track if filters other than employee_name are present
+
         if filters:
-            # Convert each filter to ChromaDB format
-            conditions = [{k: {"$eq": v}} for k, v in filters.items()]
+            normalized_filters = {}
+            for k, v in filters.items():
+                if k.lower() == 'status':
+                    normalized_filters['status'] = v.title()
+    
+                elif k.lower() == 'employee_name':
+                    employee_name_filter_value = str(v).lower() # Store employee name separately
+                    normalized_filters['employee_name'] = employee_name_filter_value
+                else:
+                    normalized_filters[k] = v
+    
+            # Construct the base conditions for the 'where' clause
+            conditions = []
+            if employee_name_filter_value:
+                conditions.append({"employee_name": {"$eq": employee_name_filter_value}})
             
-            # Use $and only if we have multiple conditions
-            if len(conditions) > 1:
-                chroma_filters = {"$and": conditions}
+            for k, v in normalized_filters.items():
+                if k.lower() != 'employee_name': # Add other filters if they exist
+                    conditions.append({k: {"$eq": v}})
+            
+            if conditions:
+                chroma_filters = {"$and": conditions} if len(conditions) > 1 else conditions[0]
             else:
-                chroma_filters = conditions[0]  # Single condition doesn't need $and
-        
-        # Perform the query with ChromaDB
+                chroma_filters = None # No filters applied if conditions is empty
+
         results = self.collection.query(
-            query_embeddings=[query_embedding],
-            where=chroma_filters,
-            n_results=n_results,
+            query_embeddings=[query_embedding], # Always include query_embeddings
+            where=chroma_filters, # Use the correctly combined filters
+            n_results=100000, # Still retrieve a large number for this specific employee
             include=["metadatas", "documents"]
         )
         
+        # If no results are found after filtering, return empty
+        if not results or not results.get("metadatas") or not results["metadatas"][0]:
+            return []
+        
+        # If an employee name filter was specifically applied and no results were found,
+        if employee_name_filter_value and not any(
+            m.get('employee_name') == employee_name_filter_value
+            for m in results.get('metadatas', [[]])[0]
+        ):
+            return []
+
         return [
             {"metadata": m, "document": d}
             for m, d in zip(results["metadatas"][0], results["documents"][0])
         ]
-    
-    # Private method to generate a structured response using LLM
     def _generate_response(self, query: str, context: List[Dict]) -> str:
         """Generate a structured response using LLM with retrieved invoice context."""
         # Prepare the context for LLM
@@ -109,7 +141,6 @@ class RAGInvoiceChatbot:
             for i, inv in enumerate(context)
         ])
 
-        # Construct the prompt for LLM
         prompt = f"""
         You are an invoice reimbursement assistant. Based on the following invoice details, 
         answer the user's question in a clear, structured format. Follow these guidelines:
@@ -137,7 +168,7 @@ class RAGInvoiceChatbot:
         - Partially Reimbursed: [count]
         - Declined: [count]
         """
-        
+
         response = self.groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model=self.llm_model,

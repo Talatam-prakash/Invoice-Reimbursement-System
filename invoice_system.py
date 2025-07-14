@@ -42,7 +42,7 @@ class InvoiceReimbursementSystem:
                     model_name="all-MiniLM-L6-v2"
                 )
             )
-        except ValueError:
+        except chromadb.errors.NotFoundError:
             self.collection = self.chroma_client.create_collection(
                 name="invoices",
                 embedding_function=embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -226,8 +226,8 @@ Example Response:
                     # Store in vector DB 
                     embedding = self.embedding_model.encode(invoice_text)
                     metadata = {
-                        "employee_name": analysis["employee_name"],
-                        "status": analysis["status"],
+                        "employee_name": analysis["employee_name"].lower(),
+                        "status": analysis["status"].title(),
                         "reason": analysis["reason"],
                         "amount_approved": str(analysis["amount_approved"]),
                         "invoice_amount": str(analysis["invoice_amount"]),

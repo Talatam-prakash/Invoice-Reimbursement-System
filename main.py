@@ -97,16 +97,15 @@ async def query_invoices(
         # Build filters dictionary
         filters = {}
         if status:
-            filters["status"] = status
+            filters["status"] = status.title()
         if employee_name:
-            filters["employee_name"] = employee_name
+            filters["employee_name"] = employee_name.lower()
 
 
         # Query the RAG system
         response = rag_chatbot.query_invoices(
             query=query,
             filters=filters if filters else None,
-            n_results=10
         )
         
         return {"query": query, "response": response}
