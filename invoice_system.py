@@ -64,6 +64,7 @@ class InvoiceReimbursementSystem:
                     with fitz.open(file_path) as doc:
                         for page in doc:
                             text += page.get_text()
+                    text = text.replace("\n\n", "\n")
                     if text.strip():
                         return text.strip()
                 except Exception:
@@ -71,30 +72,21 @@ class InvoiceReimbursementSystem:
                     with open(file_path, "rb") as f:
                         reader = PdfReader(f)
                         text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+                        text = text.replace("\n\n", "\n")
                         return text if text.strip() else None
             # DOCX file handling
             elif file_path.lower().endswith('.docx'):
                 doc = docx.Document(file_path)
-                return "\n".join([para.text for para in doc.paragraphs if para.text])
-            
+                text = "\n".join([para.text for para in doc.paragraphs if para.text])
+                text = text.replace("\n\n", "\n")
+                return text if text.strip() else None
+
             raise ValueError(f"Unsupported file format: {file_path}")
             
         except Exception as e:
             print(f"Error extracting text from {file_path}: {str(e)}")
             return None
         
-    # def extract_text_from_pdf(self, file_path) -> Optional[str]:
-    #     """Extract text from a PDF file using PyMuPDF (fitz)."""
-    #     try:
-    #         text = ""
-    #         with fitz.open(file_path) as doc:
-    #             for page in doc:
-    #                 text += page.get_text()
-    #         return text.strip() if text.strip() else None
-    #     except Exception as e:
-    #         print(f"Error reading PDF: {str(e)}")
-    #         return None
-
     # Method to analyze invoice against HR policy using Groq LLM
     def analyze_invoice(self, policy_text: str, invoice_text: str, employee_name: str = None, max_retries: int = 3) -> Optional[Dict]:
         """Analyze invoice against policy using Groq LLM."""

@@ -1,0 +1,33 @@
+__pycache__
+*.pyc
+*.pyo
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore environment variables
+.env
+.env.local
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore data files and folders
+prompts/
+Notebooks/
+
+# Ignore database and cache files
+chroma_db/
+*.sqlite3
+*.db
+
